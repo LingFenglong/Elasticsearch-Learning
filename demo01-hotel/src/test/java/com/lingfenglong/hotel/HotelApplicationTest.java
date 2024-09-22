@@ -2,6 +2,7 @@ package com.lingfenglong.hotel;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.bulk.DeleteOperation;
 import co.elastic.clients.elasticsearch.indices.CreateIndexRequest;
 import co.elastic.clients.elasticsearch.indices.DeleteIndexRequest;
 import co.elastic.clients.elasticsearch.indices.GetIndexRequest;
@@ -13,6 +14,7 @@ import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lingfenglong.hotel.constants.HotelConstants;
 import com.lingfenglong.hotel.dao.HotelRepository;
+import com.lingfenglong.hotel.entity.Hotel;
 import com.lingfenglong.hotel.entity.HotelDoc;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RequestOptions;
@@ -156,6 +158,34 @@ class HotelApplicationTest {
                         , HotelDoc.class)
                 .source();
         System.out.println(found);
+    }
+
+    @Test
+    void addBulkDocumentTest() throws IOException {
+        elasticsearchClient.bulk(request -> {
+            hotelRepository.findAll()
+                    .stream()
+                    .map(HotelDoc::new)
+                    .forEach(hotelDoc -> request.operations(opt -> opt.index(index -> index
+                            .id(hotelDoc.id())
+                            .document(hotelDoc)
+                    )));
+            return request.index(HotelConstants.HOTEL_INDEX);
+        });
+    }
+
+    @Test
+    void deleteBulkDocumentTest() throws IOException {
+        elasticsearchClient.bulk(request -> {
+            hotelRepository.findAll()
+                    .stream()
+                    .map(Hotel::getId)
+                    .map(Object::toString)
+                    .forEach(id -> request.operations(opt -> opt.delete(delete -> delete
+                            .id(id)
+                    )));
+            return request.index(HotelConstants.HOTEL_INDEX);
+        });
     }
 
     @BeforeEach
